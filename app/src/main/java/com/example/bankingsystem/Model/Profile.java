@@ -85,6 +85,12 @@ public class Profile {
 
     public void addAutoTransferTransaction(Account sendingAcc, Account receivingAcc, double transferAmount) {//한달마다 보내기
 
+        try{
+            Date next = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").parse("")
+        }catch(ParseException e){
+            e.printStackTrace();
+        }
+
         sendingAcc.setAccountBalance(sendingAcc.getAccountBalance() - transferAmount);
         receivingAcc.setAccountBalance(receivingAcc.getAccountBalance() + transferAmount);
 
@@ -105,7 +111,7 @@ public class Profile {
         receivingAcc.getTransactions().add(new Transaction("T" + (receivingAcc.getTransactions().size() + 1) + "-T" + (receivingAccTransferCount+1), sendingAcc.toTransactionString(), receivingAcc.toTransactionString(), transferAmount));
     }
 
-    private long getDuration(){//한 달 후의 시간을 반환(timemills)
+    private long getDuration(){//한 달 후의 현재 시간을 반환(timemills)
         // get todays date
         Calendar cal = Calendar.getInstance();
         // get current month
@@ -113,8 +119,8 @@ public class Profile {
 
         // move month ahead
         currentMonth++;
-        // check if has not exceeded threshold of december
 
+        // check if has not exceeded threshold of december
         if(currentMonth > Calendar.DECEMBER){
             // alright, reset month to jan and forward year by 1 e.g fro 2013 to 2014
             currentMonth = Calendar.JANUARY;
@@ -127,14 +133,11 @@ public class Profile {
         // get the maximum possible days in this month
         int maximumDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
 
-        // set the calendar to maximum day (e.g in case of fEB 28th, or leap 29th)
+        // set the calendar to maximum day (e.g in case of fEB 28th, or leap 29th) 말일 계산
         cal.set(Calendar.DAY_OF_MONTH, maximumDay);
         long thenTime = cal.getTimeInMillis(); // this is time one month ahead
 
-
-
         return (thenTime); // this is what you set as trigger point time i.e one month after
-
     }
 
     public void addPayee(String payeeName) {
