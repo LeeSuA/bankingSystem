@@ -29,7 +29,7 @@ public class TransferFragment extends Fragment {
     private EditText edtTransferAmount;
     private Spinner spnReceivingAccount;
     private Button btnConfirmTransfer;
-
+    private Button btnConfirmAutoTransfer;
     ArrayList<Account> accounts;
     ArrayAdapter<Account> accountAdapter;
 
@@ -57,7 +57,7 @@ public class TransferFragment extends Fragment {
         edtTransferAmount = rootView.findViewById(R.id.edt_transfer_amount);
         spnReceivingAccount = rootView.findViewById(R.id.spn_select_receiving_acc);
         btnConfirmTransfer = rootView.findViewById(R.id.btn_confirm_transfer);
-
+        btnConfirmAutoTransfer = rootView.findViewById(R.id.btn_confirm_autotransfer);
         setValues();
 
         return rootView;
@@ -81,6 +81,12 @@ public class TransferFragment extends Fragment {
             }
         });
 
+        btnConfirmAutoTransfer.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                confirmAutoTransfer();
+            }
+        });
         setAdapters();
     }
 
@@ -154,6 +160,64 @@ public class TransferFragment extends Fragment {
                 prefsEditor.putString("LastProfileUsed", json).apply();
 
                 Toast.makeText(getActivity(), "Transfer of $" + String.format(Locale.getDefault(), "%.2f",transferAmount) + " successfully made", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void confirmAutoTransfer() {
+
+        int receivingAccIndex = spnReceivingAccount.getSelectedItemPosition();
+        boolean isNum = false;
+        double transferAmount = 0;
+
+        try {
+            transferAmount = Double.parseDouble(edtTransferAmount.getText().toString());
+            isNum = true;
+        } catch (Exception e) {
+            Toast.makeText(getActivity(), "Please enter an amount to transfer", Toast.LENGTH_SHORT).show();
+        }
+        if (isNum) {
+            if (spnSendingAccount.getSelectedItemPosition() == receivingAccIndex) {
+                Toast.makeText(getActivity(), "You cannot make a transfer to the same account", Toast.LENGTH_SHORT).show();
+            }
+            else if(transferAmount < 0.01) {
+                Toast.makeText(getActivity(), "The minimum amount for a transfer is $0.01", Toast.LENGTH_SHORT).show();
+
+            } else if (transferAmount > userProfile.getAccounts().get(spnSendingAccount.getSelectedItemPosition()).getAccountBalance()) {
+
+                Account acc = (Account) spnSendingAccount.getSelectedItem();
+                Toast.makeText(getActivity(), "The account," + " " + acc.toString() + " " + "does not have sufficient funds to make this transfer", Toast.LENGTH_LONG).show();
+            } else {
+
+                int sendingAccIndex = spnSendingAccount.getSelectedItemPosition();
+
+                Account sendingAccount = (Account) spnSendingAccount.getItemAtPosition(sendingAccIndex);
+                Account receivingAccount = (Account) spnReceivingAccount.getItemAtPosition(receivingAccIndex);
+
+                userProfile.addAutoTransferTransaction(sendingAccount, receivingAccount, transferAmount);//여기서 돈 보냄
+
+                spnSendingAccount.setAdapter(accountAdapter);
+                spnReceivingAccount.setAdapter(accountAdapter);
+
+                spnSendingAccount.setSelection(sendingAccIndex);
+                spnReceivingAccount.setSelection(receivingAccIndex);
+
+                ApplicationDB applicationDb = new ApplicationDB(getActivity().getApplicationContext());
+
+                applicationDb.overwriteAccount(userProfile, sendingAccount);
+                applicationDb.overwriteAccount(userProfile, receivingAccount);
+
+                applicationDb.saveNewTransaction(userProfile, sendingAccount.getAccountNo(),
+                        sendingAccount.getTransactions().get(sendingAccount.getTransactions().size()-1));
+                applicationDb.saveNewTransaction(userProfile, receivingAccount.getAccountNo(),
+                        receivingAccount.getTransactions().get(receivingAccount.getTransactions().size()-1));
+
+
+                SharedPreferences.Editor prefsEditor = userPreferences.edit();
+                json = gson.toJson(userProfile);
+                prefsEditor.putString("LastProfileUsed", json).apply();
+
+                Toast.makeText(getActivity(), "Automatic Transfer of $" + String.format(Locale.getDefault(), "%.2f",transferAmount) + " will begin now", Toast.LENGTH_SHORT).show();
             }
         }
     }
